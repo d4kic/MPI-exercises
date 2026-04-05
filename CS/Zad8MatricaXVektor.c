@@ -19,22 +19,21 @@ int main(int argc, char** argv)
 	if (rank == 0)
 	{
 		for (int i = 0; i < n; ++i)
+		{
+			b[i] = 1;
 			for (int j = 0; j < n; ++j)
 				a[i][j] = i + j;
-		for (int i = 0; i < n; ++i)
-			b[i] = 1;
+		}
 	}
-	int local_a[n], local_c = 0, c[n];
+	int local_a[n], local_res = 0, res[n];
 	MPI_Scatter(a, n, MPI_INT, local_a, n, MPI_INT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(b, n, MPI_INT, 0, MPI_COMM_WORLD);
 	for (int i = 0; i < n; ++i)
-		local_c += local_a[i] * b[i];
-	MPI_Gather(&local_c, 1, MPI_INT, c, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		local_res += local_a[i] * b[i];
+	MPI_Gather(&local_res, 1, MPI_INT, res, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	if (rank == 0)
-	{
 		for (int i = 0; i < n; ++i)
-			printf("%d ", c[i]);
-	}
+			printf("%d ", res[i]);
 	MPI_Finalize();
 	return 0;
 }

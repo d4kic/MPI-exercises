@@ -9,7 +9,7 @@ int main(int argc, char** argv)
 	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
 	int a = rank, b, sum = 0;
 	int right = (rank + 1) % numproc;
-	int left = (rank - 1 + numproc) % numproc;
+	int left = int left = rank == 0 ? numproc - 1 : rank - 1;
 	MPI_Status status;
 	MPI_Request req;
 	for (int i = 0; i < numproc; ++i)

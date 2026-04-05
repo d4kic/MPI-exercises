@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <mpi.h>
+#include <stdlib.h>
+
+#define n 6
 
 int main(int argc, char** argv)
 {
@@ -7,21 +10,25 @@ int main(int argc, char** argv)
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
-	int a = rank, b, sum = 0;
-	int right = (rank + 1) % numproc;
-	int left = (rank - 1 + numproc) % numproc;
-	MPI_Status status;
-	MPI_Request req;
-	for (int i = 0; i < numproc; ++i)
+	int a[n][n], b[n];
+	if (rank == 0)
 	{
-		MPI_Isend(&a, 1, MPI_INT, left, 0, MPI_COMM_WORLD, &req);
-		MPI_Recv(&b, 1, MPI_INT, right, 0, MPI_COMM_WORLD, &status);
-		MPI_Wait(&req, &status);
-		a = b;
-		sum += a;
+		for (int i = 0; i < n; ++i)
+		{
+			b[i] = 1;
+			for (int j = 0; j < n; ++j)
+				a[i][j] = i + j;
+		}
 	}
-	printf("Process %d has sum = %d", rank, sum);
-	fflush(stdout);
+	int local_a[n], local_res = 0, res[n];
+	MPI_Scatter(a, n, MPI_INT, local_a, n, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(b, n, MPI_INT, 0, MPI_COMM_WORLD);
+	for (int i = 0; i < n; ++i)
+		local_res += local_a[i] * b[i];
+	MPI_Gather(&local_res, 1, MPI_INT, res, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank == 0)
+		for (int i = 0; i < n; ++i)
+			printf("%d ", res[i]);
 	MPI_Finalize();
 	return 0;
 }

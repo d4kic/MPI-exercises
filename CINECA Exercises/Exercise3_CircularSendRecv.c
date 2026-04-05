@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 		sendBuff[i] = rank;
 
 	int right = (rank + 1) % size;
-	int left = (rank - 1 + size) % size;
+	int left = rank == 0 ? size - 1 : rank - 1;
 
 	MPI_Isend(sendBuff, n, MPI_FLOAT, right, 0, MPI_COMM_WORLD, &req);
 	MPI_Recv(recvBuff, n, MPI_FLOAT, left, 0, MPI_COMM_WORLD, &status);
