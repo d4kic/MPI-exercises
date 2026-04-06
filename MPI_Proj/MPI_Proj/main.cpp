@@ -1,34 +1,39 @@
 #include <stdio.h>
 #include <mpi.h>
+#include <stdlib.h>
+
+#define n 8
 
 int main(int argc, char** argv)
 {
-	int rank, p;
+	int rank, numproc;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &p);
-	int buf1, buf2;
+	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
+	int perProc = n / numproc;
+	if (rank < n % numproc) perProc++;
+	int arr[n];
 	if (rank == 0)
 	{
-		buf1 = 1; buf2 = 2;
-		for (int i = 1; i < p; ++i)
+		printf("Before: ");
+		for (int i = 0; i < n; ++i)
 		{
-			MPI_Send(&buf1, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-			MPI_Send(&buf2, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
-		}
-		for (int i = 1; i < p; ++i)
-		{
-			MPI_Recv(&buf1, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			printf("Root process %d primio %d\n", rank, buf1);
+			arr[i] = i;
+			printf("%d ", arr[i]);
 		}
 	}
-	else
+	int* local_arr = (int*)malloc(perProc * sizeof(int));
+	MPI_Scatter(arr, perProc, MPI_INT, local_arr, perProc, MPI_INT, 0, MPI_COMM_WORLD);
+	for (int i = 0; i < perProc; ++i)
+		local_arr[i] += rank;
+	MPI_Gather(local_arr, perProc, MPI_INT, arr, perProc, MPI_INT, 0, MPI_COMM_WORLD);
+	if (rank == 0)
 	{
-		MPI_Recv(&buf1, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		MPI_Recv(&buf2, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		printf("Process %d je prvo primio %d pa %d", rank, buf1, buf2);
-		MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+		printf("\nAfter: ");
+		for (int i = 0; i < n; ++i)
+			printf("%d ", arr[i]);
 	}
+	free(local_arr);
 	MPI_Finalize();
 	return 0;
 }
