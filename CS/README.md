@@ -1,1 +1,0 @@
-Zadaci sa slajdova na CS-u

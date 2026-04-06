@@ -16,3 +16,5 @@ https://www.codingame.com/playgrounds/349/introduction-to-mpi/introduction-to-di
 https://github.com/EPCCed/archer2-MPI-2020-05-14
 
 https://gitlab.hpc.cineca.it/training/mpi-openmp/-/tree/master/MPI
+
+https://pdc-support.github.io/introduction-to-mpi/index.html
