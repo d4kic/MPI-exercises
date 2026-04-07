@@ -13,28 +13,25 @@ i rezultat se akumulira u P0. */
 #include <stdio.h>
 #include <mpi.h>
 
-// NAPOMENA: Podrazumeva se da je N stepen 2!!!
 int main(int argc, char** argv)
 {
-	int rank, size;
+	int rank, numproc;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-	MPI_Status status;
-	int val = rank; // Ovde ce da se racuna zbir
-	int step = 1; // Bolji nacin da se nalazi sused, posto je u svakom koraku on udaljen za stepen dvojke
-	while (step != size)
+	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
+	int step = 1, val = rank;
+	while (step < numproc)
 	{
-		if (rank % (2 * step) == 0) // Izdvajanje potrebnih procesa u kojima se vrsi sabiranje
+		if (rank % (2 * step) == 0)
 		{
-			if (rank + step < size) // Nalazi onog sto prima vrednost od suseda
+			if (rank + step < numproc)
 			{
 				int recv;
-				MPI_Recv(&recv, 1, MPI_INT, rank + step, 0, MPI_COMM_WORLD, &status);
+				MPI_Recv(&recv, 1, MPI_INT, rank + step, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				val += recv;
 			}
 		}
-		else // Ako nije potreban za racunanje u tr. koraku, salje i izlazi
+		else
 		{
 			MPI_Send(&val, 1, MPI_INT, rank - step, 0, MPI_COMM_WORLD);
 			break;

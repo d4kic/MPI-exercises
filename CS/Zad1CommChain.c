@@ -13,7 +13,6 @@ int main(int argc, char** argv)
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
-	MPI_Status status;
 	int a = 0;
 	do
 	{
@@ -24,7 +23,7 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			MPI_Recv(&a, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &status);
+			MPI_Recv(&a, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			if (rank != size - 1)
 				MPI_Send(&a, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD);
 		}

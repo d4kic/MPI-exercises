@@ -12,11 +12,11 @@ Koristiti celobrojne nizove. Zadatak realizovati koriscenjem MPI Point-to-Point 
 
 int main(int argc, char** argv)
 {
-	int rank, size;
+	int rank, numproc;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-	const int p = size - 1;
+	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
+	int p = numproc - 1; // p0 nije proces radnik
 	if (rank == 0)
 	{
 		const int n = p * (p + 1);
@@ -24,24 +24,20 @@ int main(int argc, char** argv)
 		for (int i = 0; i < n; ++i)
 			niz[i] = i + 1;
 		int offset = 0;
-		for (int i = 1; i <= p; ++i)
+		for (int i = 1; i < numproc; ++i)
 		{
-			int count = 2 * i;
-			MPI_Send(niz + offset, count, MPI_INT, i, 0, MPI_COMM_WORLD);
-			offset += count;
+			MPI_Send(niz + offset, i * 2, MPI_INT, i, 0, MPI_COMM_WORLD);
+			offset += i * 2;
 		}
-		free(niz);
 	}
 	else
 	{
-		int count = 2 * rank;
-		int* niz = (int*)malloc(count * sizeof(int));
-		MPI_Recv(niz, count, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		int sum = 0;
-		for (int i = 0; i < count; ++i)
+		int recvCount = rank * 2, sum = 0;
+		int* niz = (int*)malloc(recvCount * sizeof(int));
+		MPI_Recv(niz, recvCount, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		for (int i = 0; i < recvCount; ++i)
 			sum += niz[i];
-		printf("Process %d, sum = %d", rank, sum);
-		free(niz);
+		printf("Process %d je izracunao %d", rank, sum);
 	}
 	MPI_Finalize();
 	return 0;
