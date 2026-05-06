@@ -1,23 +1,8 @@
-/* zad. Napisati MPI program koji pronalazi proizvod matrice Amxn i vektora
-bn. Matrica A i vector b se inicijalizuju u procesu 0. Izracunavanje se
-obavlja tako što se svakom procesu distribuira po kolona matrice A i po 1
-element vektora b. Za distribuciju kolona po procesima koristiti P-t-P
-operacije, za sve ostalo grupne operacije. Svi procesi ucestvuju u
-izracunavanju. Rezultat se prikazuje u procesu koji, nakon distribuiranja
-kolona matrice A, sadrzi minimum svih elemenata matrice A. */
-
 #include <stdio.h>
 #include <mpi.h>
 #include <stdlib.h>
 
-#define n 3
-#define m 4
-
-struct buff
-{
-	int val;
-	int rank;
-};
+#define n 8
 
 int main(int argc, char** argv)
 {
@@ -25,62 +10,41 @@ int main(int argc, char** argv)
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
-	int a[n][m], b[m];
-	int x[n], y[n], z;
-	struct buff min, local_min;
+	int perProc = n / numproc;
+	int a[n], b[n];
+	int* local_a = malloc(perProc * sizeof(int));
+	int* local_b = malloc(perProc * sizeof(int));
+	MPI_Datatype tmp, elements;
+	MPI_Type_vector(perProc, 1, numproc, MPI_INT, &tmp);
+	MPI_Type_create_resized(tmp, 0, sizeof(int), &elements);
+	MPI_Type_commit(&elements);
+
 	if (rank == 0)
 	{
 		for (int i = 0; i < n; ++i)
 		{
-			for (int j = 0; j < m; ++j)
-			{
-				a[i][j] = i + j;
-			}
-		}
-		for (int i = 0; i < m; ++i)
-		{
-			b[i] = 1;
+			a[i] = i + 1;
+			b[i] = i + 1;
 		}
 	}
-	if (rank == 0)
+	MPI_Scatter(a, 1, elements, local_a, perProc, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Scatter(b, 1, elements, local_b, perProc, MPI_INT, 0, MPI_COMM_WORLD);
+
+	int local_res = 0, res;
+	for (int i = 0; i < perProc; ++i)
 	{
-		for (int i = 0; i < n; ++i)
-			x[i] = a[i][0];
-		for (int j = 1; j < numproc; ++j)
-		{
-			for (int i = 0; i < n; ++i)
-			{
-				y[i] = a[i][j];
-			}
-			MPI_Send(y, n, MPI_INT, j, 0, MPI_COMM_WORLD);
-		}
+		local_res += local_a[i] * local_b[i];
 	}
-	else
-		MPI_Recv(x, n, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	MPI_Scatter(&b[0], 1, MPI_INT, &z, 1, MPI_INT, 0, MPI_COMM_WORLD);
-	int local_res[n], res[n];
-	for (int i = 0; i < n; ++i)
-		local_res[i] = x[i] * z;
-	local_min.val = INT_MAX;
-	for (int i = 0; i < n; ++i)
+	MPI_Reduce(&local_res, &res, 1, MPI_INT, MPI_SUM, 1, MPI_COMM_WORLD);
+
+	if (rank == 1)
 	{
-		if (x[i] < local_min.val)
-		{
-			local_min.val = x[i];
-			local_min.rank = rank;
-		}
+		printf("Skalarni proizvod je %d\n", res);
 	}
-	MPI_Reduce(&local_min, &min, 1, MPI_2INT, MPI_MINLOC, 0, MPI_COMM_WORLD);
-	MPI_Bcast(&min, 1, MPI_2INT, 0, MPI_COMM_WORLD);
-	MPI_Reduce(local_res, res, n, MPI_INT, MPI_SUM, min.rank, MPI_COMM_WORLD);
-	if (rank == min.rank)
-	{
-		for (int i = 0; i < n; ++i)
-		{
-			printf("res[%d] = %d\n", i, res[i]);
-		}
-		printf("min = %d\n", min.val);
-	}
+
+	MPI_Type_free(&elements);
+	free(local_a);
+	free(local_b);
 	MPI_Finalize();
 	return 0;
 }
