@@ -1,50 +1,57 @@
+/* zad. Napisati program kojim se elementi gornje trougaone matrice Anxn
+procesa 0, salju u gornju trougaonu matricu Tnxn procesa 1. */
+
 #include <stdio.h>
 #include <mpi.h>
-#include <stdlib.h>
 
-#define n 8
+#define n 5
 
 int main(int argc, char** argv)
 {
-	int rank, numproc;
 	MPI_Init(&argc, &argv);
+	int rank, numproc;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
-	int perProc = n / numproc;
-	int a[n], b[n];
-	int* local_a = malloc(perProc * sizeof(int));
-	int* local_b = malloc(perProc * sizeof(int));
-	MPI_Datatype tmp, elements;
-	MPI_Type_vector(perProc, 1, numproc, MPI_INT, &tmp);
-	MPI_Type_create_resized(tmp, 0, sizeof(int), &elements);
-	MPI_Type_commit(&elements);
-
-	if (rank == 0)
-	{
-		for (int i = 0; i < n; ++i)
-		{
-			a[i] = i + 1;
-			b[i] = i + 1;
+	int displacements[n], block_lengths[n];
+	for (int i = 0; i < n; ++i) {
+		block_lengths[i] = i + 1;
+		displacements[i] = i * n;
+	}
+	MPI_Datatype vrste_donja, vrste_gornja;
+	MPI_Type_indexed(n, block_lengths, displacements, MPI_INT, &vrste_donja);
+	MPI_Type_commit(&vrste_donja);
+	for (int i = 0; i < n; ++i) {
+		block_lengths[i] = n - i;
+		displacements[i] = (n + 1) * i;
+	}
+	MPI_Type_indexed(n, block_lengths, displacements, MPI_INT, &vrste_gornja);
+	MPI_Type_commit(&vrste_gornja);
+	if (rank == 0) {
+		int a[n][n];
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j) {
+				a[i][j] = i + j + 1;
+			}
+		}
+		MPI_Send(a, 1, vrste_donja, 1, 0, MPI_COMM_WORLD);
+	}
+	else {
+		int t[n][n];
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j) {
+				t[i][j] = 0;
+			}
+		}
+		MPI_Recv(t, 1, vrste_gornja, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j) {
+				printf("%d ", t[i][j]);
+			}
+			printf("\n");
 		}
 	}
-	MPI_Scatter(a, 1, elements, local_a, perProc, MPI_INT, 0, MPI_COMM_WORLD);
-	MPI_Scatter(b, 1, elements, local_b, perProc, MPI_INT, 0, MPI_COMM_WORLD);
-
-	int local_res = 0, res;
-	for (int i = 0; i < perProc; ++i)
-	{
-		local_res += local_a[i] * local_b[i];
-	}
-	MPI_Reduce(&local_res, &res, 1, MPI_INT, MPI_SUM, 1, MPI_COMM_WORLD);
-
-	if (rank == 1)
-	{
-		printf("Skalarni proizvod je %d\n", res);
-	}
-
-	MPI_Type_free(&elements);
-	free(local_a);
-	free(local_b);
+	MPI_Type_free(&vrste_donja);
+	MPI_Type_free(&vrste_gornja);
 	MPI_Finalize();
 	return 0;
 }
